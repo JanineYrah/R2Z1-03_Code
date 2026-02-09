@@ -1,6 +1,6 @@
 import tensorflow as tf
 from tensorflow import keras
-import matplotlib as plt
+# import matplotlib as plt
 
 print("SYSTEM/PACKAGE INFORMATION:")
 print("TensorFlow version: ", tf.__version__)
@@ -9,46 +9,17 @@ print("GPU built with TensorFlow: ", tf.test.is_built_with_cuda())
 print("Can access GPU: ", tf.config.experimental.list_physical_devices('GPU'))
 print("TROUBLESHOOT DONE")
 
-'''TRAIN-VALIDATE-TEST SPLIT'''
-model_labels = ['L', 'F'] # L is leaf, F is flower
-folders = ["Training", "Validation", "Testing"]
-plant_categories = ["AAU", "ACO", "AMA", "ARH", "BPU", "CFI", "CJA", "CRA", "DRE", "IBI", "IPA", "LLE", "LPU", "MDI",
-"MPU", "MQU", "PDU", "PIN", "PSA", "PVU", "SAL", "SOB", "SOC", "SSA", "TIN"]
-
-directory = None #insert link to folder of images
-
-train_val_dataset = tf.keras.utils.image_dataset_from_directory(directory, labels = 'inferred', label_mode = 'categorical',
-                                                                image_size = (224, 224), shuffle = False, validation_split = 0.3, subset = 'both')
-validate_ds, test_ds = tf.keras.utils.split_dataset(train_val_dataset, left_size=0.5, right_size=None, shuffle=False, seed=None)
-
-
 '''MODEL PROPER'''
 IMG_SIZE = (224, 224, 3) # Set image size
 
 # Load base model
-base_model = tf.keras.applications.ResNet50(input_shape=IMG_SIZE,
-include_top=False,
-weights='imagenet')
+base_model = tf.keras.applications.ResNet50(input_shape=IMG_SIZE, include_top=False, weights='imagenet')
 # Freeze the base ResNet-50
 base_model.trainable = False
 
 # Preprocessing and main model
 model = tf.keras.Sequential([
-    tf.keras.Input(shape=IMG_SIZE), # still unsure on input_shape
-	tf.keras.layers.Resizing(224, 224), # resizing layer
-    
-    '''Data augmentation layers could either  be pipeline or 
-    individually. I'll do it individually here for now'''
-    
-    tf.keras.layers.RandomRotation(20),
-    tf.keras.layers.RandomFlip(), # horizontal_and_vertical by default
-    tf.keras.layers.RandomCrop(30, 30),
-    tf.keraslayers.RandomBrightness((0.8, 1.2)),
-
-	'''include_top may be False in the base_model if the immediately
-    preceeding layer before it differs in input_shape. keep true if they are the same'''
-    
-    base_model,
+    base_model, # include_top may be False in the base_model if the immediately preceeding layer before it differs in input_shape. keep true if they are the same
     # Additional layers
     tf.keras.layers.GlobalAveragePooling2D(),
     tf.keras.layers.Flatten(),
@@ -60,23 +31,18 @@ model = tf.keras.Sequential([
     tf.keras.layers.Dense(128, activation='relu', kernel_regularizer=tf.keras.regularizers.l2(0.0005)),
     tf.keras.layers.Dense(64, activation='relu', kernel_regularizer=tf.keras.regularizers.l2(0.0005)),
     tf.keras.layers.Dense(25) # output layer; modified for 25 layers
-    ])
-
-'''# Extra: preprocessing pipeline, if we want to fuse all data augmentation into one na; Just replace the individual layers of model as this
-preprocessing_pipeline = tf.keras.layers.Pipeline([
-    tf.keras.layers.RandomRotation(20),
-    tf.keras.layers.RandomFlip(), # horizontal_and_vertical by default
-    tf.keras.layers.RandomCrop(30, 30),
-    tf.keras.layers.RandomBrightness((0.8, 1.2))
-])'''
+    ])s
 
 # Compile model
 model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
 loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),metrics=['accuracy'])
 
 model.summary()
-model.save("leaf_CNN-1.keras")
+# model.save("leaf_CNN-1.keras")
+tf.keras.utils.plot_model(model, to_file = "testing_2.png", show_shapes = True, show_dtype = True, show_layer_names = True,
+                          show_layer_activations = True, show_trainable = True)
 
+'''
 # TRAIN-VAL
 number_epochs = 30
 train_val_history = model.fit(img_train, label_train,
@@ -142,3 +108,4 @@ best_hps=tuner.get_best_hyperparameters(num_trials=1)[0]
 print("Optimal batch size:", best_hps.get('batch_size'))
 print("Optimal learning rate:", best_hps.get('learning_rate'))
 print("Optimal dropout rate:", best_hps.get('dropout_rate'))
+'''
