@@ -31,7 +31,7 @@ model = tf.keras.Sequential([
     tf.keras.layers.Dense(128, activation='relu', kernel_regularizer=tf.keras.regularizers.l2(0.0005)),
     tf.keras.layers.Dense(64, activation='relu', kernel_regularizer=tf.keras.regularizers.l2(0.0005)),
     tf.keras.layers.Dense(25) # output layer; modified for 25 layers
-    ])s
+    ])
 
 # Compile model
 model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
