@@ -3,7 +3,8 @@ from tensorflow import keras
 import os
 import PIL
 from PIL import Image
-# import matplotlib as plt
+import matplotlib as plt
+import numpy as np
 
 print("SYSTEM/PACKAGE INFORMATION:")
 print("TensorFlow version: ", tf.__version__)
@@ -44,15 +45,42 @@ augmentation_pipeline = tf.keras.Sequential([
 ])
 '''
 
-leaf_directory = 'home/r2z103/res_dataset/leaf' # all png and resized to 224x224
-flower_directory = 'home/r2z103/res_dataset/flower' # all png and resized to 224x224
+leaf_directory = '/home/r2z103/res_dataset/Leaf' # all png and resized to 224x224
+flower_directory = '/home/r2z103/res_dataset/Flower' # all png and resized to 224x224
 
 # Train-Validate-Test Split
-dataset = tf.keras.preprocessing.image_dataset_from_directory(directory, shuffle = False)
-# train_ds, validate_test_ds = tf.keras.utils.split_dataset(dataset, left_size=0.7, right_size=0.3, shuffle=False, seed=1)
-# validate_ds, test_ds = tf.keras.utils.split_dataset(validate_test_ds, left_size=0.5, right_size=0.5, shuffle=False, seed=1)
-
-# validate_dataset, test_dataset = tf.keras.utils.split_dataset(val_test_ds, left_size=0.5, right_size=None, shuffle=False, seed=1)
-
+# set batch_size = 1 to see true number of images, as the cardinality would give the number of image batches (based on batch_size = 32)
 print("DATASETS:")
-print(dataset)
+print("LEAF")
+leaf_train_ds, leaf_val_test_ds = tf.keras.utils.image_dataset_from_directory(leaf_directory, labels = "inferred", label_mode = "int", validation_split = 0.3,
+                                                                                      subset = "both", color_mode = "rgb", shuffle = True, seed = 1, batch_size = 1)
+leaf_val_batches = tf.data.experimental.cardinality(leaf_val_test_ds)
+leaf_test_ds = leaf_val_test_ds.take(leaf_val_batches // 2)
+leaf_val_ds = leaf_val_test_ds.skip(leaf_val_batches // 2)
+
+print("Training images:", int(leaf_train_ds.cardinality()))
+print("Validating images:", int(leaf_val_ds.cardinality()))
+print("Testing images:", int(leaf_test_ds.cardinality()))
+
+print("\nFLOWER")
+flower_train_ds, flower_val_test_ds = tf.keras.utils.image_dataset_from_directory(flower_directory, labels = "inferred", label_mode = "int", validation_split = 0.3,
+                                                                                          subset = "both", color_mode = "rgb", shuffle = True, seed = 1, batch_size = 1)
+flower_val_batches = tf.data.experimental.cardinality(flower_val_test_ds)
+flower_test_ds = flower_val_test_ds.take(flower_val_batches // 2)
+flower_val_ds = flower_val_test_ds.skip(flower_val_batches // 2)
+
+print("Training images:", int(flower_train_ds.cardinality()))
+print("Validating images:", int(flower_val_ds.cardinality()))
+print("Testing images:", int(flower_test_ds.cardinality()))
+
+dataset_names = [leaf_train_ds, leaf_val_ds, leaf_test_ds, flower_train_ds, flower_val_ds, flower_test_ds]
+
+for name in dataset_names:
+    labels_list = []
+    for images, labels in name:
+        labels_list.append(labels.numpy())
+    all_labels = np.concatenate(labels_list)
+    unique_labels, counts = np.unique(all_labels, return_counts=True)
+    print(f"\n{name} class distribution:")
+    for label, count in zip(unique_labels, counts):
+        print(f"Class {label}: {count} images")
