@@ -84,3 +84,9 @@ for name in dataset_names:
     print(f"\n{name} class distribution:")
     for label, count in zip(unique_labels, counts):
         print(f"Class {label}: {count} images")
+
+'''
+for ds in dataset_names:
+    tf.data.Dataset.save(ds, "/home/r2z103/res_tf_datasets")
+    print(ds, "has been saved.")
+'''

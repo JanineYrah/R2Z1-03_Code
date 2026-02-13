@@ -39,8 +39,8 @@ loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),metrics=['a
 
 model.summary()
 # model.save("leaf_CNN-1.keras")
-tf.keras.utils.plot_model(model, to_file = "testing_2.png", show_shapes = True, show_dtype = True, show_layer_names = True,
-                          show_layer_activations = True, show_trainable = True)
+tf.keras.utils.plot_model(model, to_file = "testing_3.png", show_shapes = True, show_dtype = False, show_layer_names = False,
+                          show_layer_activations = False, show_trainable = False)
 
 '''
 # TRAIN-VAL
