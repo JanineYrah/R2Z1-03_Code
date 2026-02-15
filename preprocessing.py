@@ -15,7 +15,9 @@ print("TROUBLESHOOT DONE")
 
 # TRAIN-VALIDATE-TEST SPLIT
 model_labels = ['L', 'F'] # L is leaf, F is flower
-plant_categories = ["AAU", "ACO", "AMA", "ARH", "BPU", "CFI", "CJA", "CRA", "DRE", "IBI", "IPA", "LLE", "LPU", "MDI",
+plant_categories_L = ["AAU", "ACO", "AMA", "ARH", "BPU", "CFI", "CJA", "CRA", "DRE", "IBI", "IPA", "LLE", "LPU", "MDI",
+"MPU", "MQU", "PDU", "PIN", "PSA", "PVU", "SAL", "SOB", "SOC", "SSA", "TIN"]
+plant_categories_F = ["AAU", "ACO", "AMA", "BPU", "CFI", "CJA", "DRE", "IBI", "LLE", "LPU", "MDI",
 "MPU", "MQU", "PDU", "PIN", "PSA", "PVU", "SAL", "SOB", "SOC", "SSA", "TIN"]
 to_augment = ["AMA_F", "ARH_L", "PIN_F"]
 directory = '/home/r2z103/dataset'
@@ -52,8 +54,8 @@ flower_directory = '/home/r2z103/res_dataset/Flower' # all png and resized to 22
 # set batch_size = 1 to see true number of images, as the cardinality would give the number of image batches (based on batch_size = 32)
 print("DATASETS:")
 print("LEAF")
-leaf_train_ds, leaf_val_test_ds = tf.keras.utils.image_dataset_from_directory(leaf_directory, labels = "inferred", label_mode = "int", validation_split = 0.3,
-                                                                                      subset = "both", color_mode = "rgb", shuffle = True, seed = 1, batch_size = 1)
+leaf_train_ds, leaf_val_test_ds = tf.keras.utils.image_dataset_from_directory(leaf_directory, labels = "inferred", label_mode = "int", class_names = plant_categories_L,
+                                                                              validation_split = 0.3, subset = "both", color_mode = "rgb", shuffle = True, seed = 1, batch_size = 1)
 leaf_val_batches = tf.data.experimental.cardinality(leaf_val_test_ds)
 leaf_test_ds = leaf_val_test_ds.take(leaf_val_batches // 2)
 leaf_val_ds = leaf_val_test_ds.skip(leaf_val_batches // 2)
@@ -63,8 +65,8 @@ print("Validating images:", int(leaf_val_ds.cardinality()))
 print("Testing images:", int(leaf_test_ds.cardinality()))
 
 print("\nFLOWER")
-flower_train_ds, flower_val_test_ds = tf.keras.utils.image_dataset_from_directory(flower_directory, labels = "inferred", label_mode = "int", validation_split = 0.3,
-                                                                                          subset = "both", color_mode = "rgb", shuffle = True, seed = 1, batch_size = 1)
+flower_train_ds, flower_val_test_ds = tf.keras.utils.image_dataset_from_directory(flower_directory, labels = "inferred", label_mode = "int", class_names = plant_categories_F,
+                                                                                  validation_split = 0.3, subset = "both", color_mode = "rgb", shuffle = True, seed = 1, batch_size = 1)
 flower_val_batches = tf.data.experimental.cardinality(flower_val_test_ds)
 flower_test_ds = flower_val_test_ds.take(flower_val_batches // 2)
 flower_val_ds = flower_val_test_ds.skip(flower_val_batches // 2)
@@ -72,6 +74,9 @@ flower_val_ds = flower_val_test_ds.skip(flower_val_batches // 2)
 print("Training images:", int(flower_train_ds.cardinality()))
 print("Validating images:", int(flower_val_ds.cardinality()))
 print("Testing images:", int(flower_test_ds.cardinality()))
+
+print(leaf_val_ds)
+print(flower_test_ds)
 
 dataset_names = [leaf_train_ds, leaf_val_ds, leaf_test_ds, flower_train_ds, flower_val_ds, flower_test_ds]
 
