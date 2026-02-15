@@ -37,15 +37,6 @@ for dirpath, dirnames, filenames in os.walk(directory):
             resized_image.close()
             print(f"{image_filename_no_extension} has been edited.")
 '''
-'''
-# Image Augmentation (for necessary classes)
-augmentation_pipeline = tf.keras.Sequential([
-    tf.keras.layers.RandomRotation([-0.20, 0.20]),
-    tf.keras.layers.RandomFlip(), # horizontal_and_vertical by default
-    tf.keras.layers.RandomCrop(30, 30),
-    tf.keras.layers.RandomBrightness((0.8, 1.2))
-])
-'''
 
 leaf_directory = '/home/r2z103/res_dataset/Leaf' # all png and resized to 224x224
 flower_directory = '/home/r2z103/res_dataset/Flower' # all png and resized to 224x224
@@ -60,10 +51,6 @@ leaf_val_batches = tf.data.experimental.cardinality(leaf_val_test_ds)
 leaf_test_ds = leaf_val_test_ds.take(leaf_val_batches // 2)
 leaf_val_ds = leaf_val_test_ds.skip(leaf_val_batches // 2)
 
-print("Training images:", int(leaf_train_ds.cardinality()))
-print("Validating images:", int(leaf_val_ds.cardinality()))
-print("Testing images:", int(leaf_test_ds.cardinality()))
-
 print("\nFLOWER")
 flower_train_ds, flower_val_test_ds = tf.keras.utils.image_dataset_from_directory(flower_directory, labels = "inferred", label_mode = "int", class_names = plant_categories_F,
                                                                                   validation_split = 0.3, subset = "both", color_mode = "rgb", shuffle = True, seed = 1, batch_size = 1)
@@ -71,12 +58,66 @@ flower_val_batches = tf.data.experimental.cardinality(flower_val_test_ds)
 flower_test_ds = flower_val_test_ds.take(flower_val_batches // 2)
 flower_val_ds = flower_val_test_ds.skip(flower_val_batches // 2)
 
-print("Training images:", int(flower_train_ds.cardinality()))
+# Image Augmentation (for necessary classes)
+augmentation_pipeline = [
+    tf.keras.layers.RandomRotation([-0.20, 0.20]),
+    tf.keras.layers.RandomFlip(), # horizontal_and_vertical by default
+    tf.keras.layers.RandomBrightness((0.8, 1.2))
+]
+
+def conditional_augmentation(image, label, target):
+
+    def augment():
+        augmented = image
+        for layer in augmentation_pipeline:
+            augmented = layer(augmented, training=True)
+        return augmented, label
+
+    def no_augment():
+        return image, label
+
+    return tf.cond(
+        tf.equal(label[0], target),
+        augment,
+        no_augment
+    )
+
+leaf_class3_ds = leaf_train_ds.filter(lambda img, lbl: tf.reduce_any(tf.equal(lbl, 3)))
+flower_class2_ds = flower_train_ds.filter(lambda img, lbl: tf.reduce_any(tf.equal(lbl, 2)))
+flower_class14_ds = flower_train_ds.filter(lambda img, lbl: tf.reduce_any(tf.equal(lbl, 14)))
+
+leaf_class3_aug_ds = leaf_class3_ds.map(
+    lambda img, lbl: conditional_augmentation(img, lbl, 3),
+    num_parallel_calls=tf.data.AUTOTUNE
+)
+leaf_train_ds = leaf_train_ds.concatenate(leaf_class3_aug_ds)
+leaf_train_ds = leaf_train_ds.shuffle(1000)
+
+flower_class2_aug_ds = flower_class2_ds.map(
+    lambda img, lbl: conditional_augmentation(img, lbl, 2),
+    num_parallel_calls=tf.data.AUTOTUNE
+)
+flower_train_ds = flower_train_ds.concatenate(flower_class2_aug_ds)
+flower_train_ds = flower_train_ds.shuffle(100)
+
+flower_class14_aug_ds = flower_class14_ds.map(
+    lambda img, lbl: conditional_augmentation(img, lbl, 14),
+    num_parallel_calls=tf.data.AUTOTUNE
+)
+flower_train_ds = flower_train_ds.concatenate(flower_class14_aug_ds)
+flower_train_ds = flower_train_ds.shuffle(100)
+
+def count_dataset(ds):
+    return sum(1 for _ in ds)
+
+print("LEAF")
+print("Training images:", count_dataset(leaf_train_ds))
+print("Validating images:", int(leaf_val_ds.cardinality()))
+print("Testing images:", int(leaf_test_ds.cardinality()))
+print("FLOWER")
+print("Training images:", count_dataset(flower_train_ds))
 print("Validating images:", int(flower_val_ds.cardinality()))
 print("Testing images:", int(flower_test_ds.cardinality()))
-
-print(leaf_val_ds)
-print(flower_test_ds)
 
 dataset_names = [leaf_train_ds, leaf_val_ds, leaf_test_ds, flower_train_ds, flower_val_ds, flower_test_ds]
 
