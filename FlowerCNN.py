@@ -5,6 +5,7 @@ import numpy as np
 import keras
 import os
 from PIL import Image
+import keras_tuner as kt
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
 
@@ -157,38 +158,62 @@ plt.legend(loc='upper right')
 plt.title('Training and Validation Loss')
 plt.show()
 
-'''
 # BAYESIAN OPTIMIZATION
 
 # Load saved CNN
 tuned_model = tf.keras.models.load_model("flower_CNN-1.keras")
+tuned_model.summary()
 
-# Build hypermodel
-def build_model(hp):
-	# Define hyperparameter space
-    model = tuned_model(
-        batch_size=hp.Choice('batch_size', [16, 32, 64]),
-        dropout_rate=hp.Choice('dropout_rate', min_value=0.1, max_value=0.5, step=0.1),
-        # unsure for number of fine-tuned layers
-    )
+class FlowerHyperModel(kt.HyperModel):
 
-    hp_learning_rate=hp.Choice('learning_rate', [1e-5, 1e-4, 1e-3, 0.01, 0.1])
+    def build(self, hp):
 
-    # compile
-    model.compile(
-    optimizer=tf.keras.optimizers.Adam(learning_rate=hp_learning_rate),
-    loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-    metrics=['accuracy']
-    )
-    
-    return model
+        base_model = tf.keras.applications.ResNet50(input_shape=(224, 224, 3), include_top=False, weights='imagenet')
+        base_model.trainable = False
 
-tuner = keras.tuner.BayesianOptimization(build_model, objective='val_accuracy', max_epochs=10)
+        fine_tune_at = hp.Int( # number of fine tuned layers
+            'fine_tune_layers',
+            min_value=20,
+            max_value=len(base_model.layers),
+            step=20
+        )
+
+        inputs = tf.keras.Input(shape=(224, 224, 3))
+        x = base_model(inputs, training=True)
+        x = tf.keras.layers.GlobalAveragePooling2D()(x)
+        x = tf.keras.layers.Flatten()(x)
+        x = tf.keras.layers.Dense(256, activation='relu', kernel_regularizer=tf.keras.regularizers.l2(0.0005))(x)
+        x = tf.keras.layers.Dropout(hp.Float('dropout_rate', 0.2, 0.5, step=0.1))(x)
+        x = tf.keras.layers.Dense(256, activation='relu', kernel_regularizer=tf.keras.regularizers.l2(0.0005))(x)
+        x = tf.keras.layers.Dropout(hp.Float('dropout_rate', 0.2, 0.5, step=0.1))(x)
+        x = tf.keras.layers.Dense(256, activation='relu', kernel_regularizer=tf.keras.regularizers.l2(0.0005))(x)
+        x = tf.keras.layers.Dense(128, activation='relu', kernel_regularizer=tf.keras.regularizers.l2(0.0005))(x)
+        x = tf.keras.layers.Dense(64, activation='relu', kernel_regularizer=tf.keras.regularizers.l2(0.0005))(x)
+        x = tf.keras.layers.Dropout(hp.Float('dropout_rate', 0.2, 0.5, step=0.1))(x)
+
+        outputs = tf.keras.layers.Dense(25)(x)
+
+        model = tf.keras.Model(inputs, outputs)
+
+        learning_rate = hp.Choice('learning_rate', [1e-5, 1e-4, 1e-3]) # learning rate
+
+        for layer in base_model.layers[:-fine_tune_at]:
+            layer.trainable = True
+
+        model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate), loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+            metrics=['accuracy'])
+
+        return model
+
+    def fit(self, hp, model, *args, **kwargs): # batch size
+        return model.fit(*args, batch_size=hp.Choice('batch_size', [16, 32, 64]), **kwargs)
+
+tuner = kt.BayesianOptimization(FlowerHyperModel(), objective='val_accuracy', max_trials = 10, project_name='LeafCNN-1-finetune')
 tuner.search(flower_train_ds, epochs=30, validation_data=flower_val_ds)
 
 # Get and print optimal hyperparameters
 best_hps=tuner.get_best_hyperparameters(num_trials=1)[0]
-print("Optimal batch size:", best_hps.get('batch_size'))
-print("Optimal learning rate:", best_hps.get('learning_rate'))
-print("Optimal dropout rate:", best_hps.get('dropout_rate'))
-'''
+print("Best fine-tuned layers:", best_hps.get('fine_tune_layers'))
+print("Best learning rate:", best_hps.get('learning_rate'))
+print("Best dropout rate:", best_hps.get('dropout_rate'))
+print("Best batch size:", best_hps.get('batch_size'))
