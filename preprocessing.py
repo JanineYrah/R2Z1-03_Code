@@ -82,6 +82,9 @@ def conditional_augmentation(image, label, target):
         no_augment
     )
 
+def count_dataset(ds):
+    return sum(1 for _ in ds)
+
 leaf_class3_ds = leaf_train_ds.filter(lambda img, lbl: tf.reduce_any(tf.equal(lbl, 3)))
 flower_class2_ds = flower_train_ds.filter(lambda img, lbl: tf.reduce_any(tf.equal(lbl, 2)))
 flower_class14_ds = flower_train_ds.filter(lambda img, lbl: tf.reduce_any(tf.equal(lbl, 14)))
@@ -107,9 +110,6 @@ flower_class14_aug_ds = flower_class14_ds.map(
 flower_train_ds = flower_train_ds.concatenate(flower_class14_aug_ds)
 flower_train_ds = flower_train_ds.shuffle(100)
 
-def count_dataset(ds):
-    return sum(1 for _ in ds)
-
 print("LEAF")
 print("Training images:", count_dataset(leaf_train_ds))
 print("Validating images:", int(leaf_val_ds.cardinality()))
@@ -131,8 +131,9 @@ for name in dataset_names:
     for label, count in zip(unique_labels, counts):
         print(f"Class {label}: {count} images")
 
-'''
-for ds in dataset_names:
-    tf.data.Dataset.save(ds, "/home/r2z103/res_tf_datasets")
-    print(ds, "has been saved.")
-'''
+leaf_train_ds = leaf_train_ds.batch(32).prefetch(buffer_size = tf.data.AUTOTUNE)
+leaf_val_ds = leaf_val_ds.batch(32).prefetch(buffer_size = tf.data.AUTOTUNE)
+leaf_test_ds = leaf_test_ds.batch(32).prefetch(buffer_size = tf.data.AUTOTUNE)
+flower_train_ds = flower_train_ds.batch(32).prefetch(buffer_size = tf.data.AUTOTUNE)
+flower_val_ds = flower_val_ds.batch(32).prefetch(buffer_size = tf.data.AUTOTUNE)
+flower_test_ds = flower_test_ds.batch(32).prefetch(buffer_size = tf.data.AUTOTUNE)
