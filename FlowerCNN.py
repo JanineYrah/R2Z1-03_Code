@@ -116,7 +116,7 @@ model = tf.keras.Sequential([
     ])
 
 # Compile model
-for layer in model.layers[1:]: # skip rescale and base resnet50 model
+for layer in model.layers[1:]: # skip base resnet50 model
     layer.trainable = True
 
 model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),

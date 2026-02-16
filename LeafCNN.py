@@ -1,6 +1,6 @@
 import tensorflow as tf
 from tensorflow import keras
-import matplotlib as plt
+import matplotlib.pyplot as plt
 import numpy as np
 import keras
 import os
@@ -60,7 +60,7 @@ leaf_class3_aug_ds = leaf_class3_ds.map(
     num_parallel_calls=tf.data.AUTOTUNE
 )
 leaf_train_ds = leaf_train_ds.concatenate(leaf_class3_aug_ds)
-leaf_train_ds = leaf_train_ds.shuffle(1000)
+leaf_train_ds = leaf_train_ds.shuffle(100)
 
 print("LEAF")
 print("Training images:", count_dataset(leaf_train_ds))
@@ -97,7 +97,6 @@ base_model.trainable = False
 
 # Preprocessing and main model
 model = tf.keras.Sequential([
-    tf.keras.layers.Rescaling(1./255),
     base_model, # include_top may be False in the base_model if the immediately preceeding layer before it differs in input_shape. keep true if they are the same
     tf.keras.layers.GlobalAveragePooling2D(),
     tf.keras.layers.Flatten(),
@@ -112,13 +111,11 @@ model = tf.keras.Sequential([
     ])
 
 # Compile model
+for layer in model.layers[1:]: # skip base resnet50 model
+    layer.trainable = True
+
 model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
 loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),metrics=['accuracy'])
-
-model.summary()
-# model.save("leaf_CNN-1.keras")
-# tf.keras.utils.plot_model(model, to_file = "testing_3.png", show_shapes = True, show_dtype = False, show_layer_names = False, show_layer_activations = False, show_trainable = False)
-
 
 # TRAIN-VAL
 number_epochs = 30
@@ -126,6 +123,10 @@ train_val_history = model.fit(leaf_train_ds,
                               epochs = number_epochs,
                               validation_data = (leaf_val_ds)
                               )
+
+model.save("leaf_CNN-1.keras")
+tf.keras.utils.plot_model(model, to_file = "leaf_1.png", show_shapes = True, show_dtype = False, show_layer_names = False, show_layer_activations = False, show_trainable = False)
+tf.keras.utils.plot_model(model, to_file = "leaf_1_simple.png", show_shapes = True, show_dtype = True, show_layer_names = True, show_layer_activations = True, show_trainable = True)
 
 # Evaluate train-val results
 acc = train_val_history.history['accuracy']
@@ -149,7 +150,8 @@ plt.legend(loc='upper right')
 plt.title('Training and Validation Loss')
 plt.show()
 
-'''BAYESIAN OPTIMIZATION'''
+'''
+# BAYESIAN OPTIMIZATION
 
 # Load saved CNN
 tuned_model = tf.keras.models.load_model("leaf_CNN-1.keras")
@@ -182,3 +184,4 @@ best_hps=tuner.get_best_hyperparameters(num_trials=1)[0]
 print("Optimal batch size:", best_hps.get('batch_size'))
 print("Optimal learning rate:", best_hps.get('learning_rate'))
 print("Optimal dropout rate:", best_hps.get('dropout_rate'))
+'''
